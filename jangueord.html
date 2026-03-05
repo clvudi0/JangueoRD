@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JangueoRD — Tu noche empieza aquí</title>
+<script>
+  (function(){
+    var saved = localStorage.getItem('theme');
+    if(saved === 'light'){
+      document.documentElement.classList.add('light');
+    }
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap&display=optional" rel="stylesheet"/>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC72Kg80Wth1tQazzOeIP9JZE81HyFMgwA&callback=onGoogleMapsReady&loading=async" async defer></script>
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#111118;--s2:#1a1a24;
+  --ink:#eee8ff;--ink2:#a09cb8;--ink3:#5e5a70;
+  --accent:#c026d3;--accent2:#7c3aed;--accent3:#06b6d4;
+  --neon:#e040fb;--neon-glow:rgba(224,64,251,.25);
+  --gold:#facc15;--green:#22c55e;--red:#ef4444;
+  --border:#2a2838;--r:14px;
+  --shadow-sm:0 1px 4px rgba(0,0,0,.3);
+  --shadow-md:0 4px 24px rgba(0,0,0,.5);
+  --shadow-lg:0 8px 48px rgba(0,0,0,.6);
+  --map-transition:.3s cubic-bezier(.4,0,.2,1);
+  --glow:0 0 20px var(--neon-glow),0 0 60px rgba(192,38,211,.1);
+}
+html.light{
+  --bg:#f4f0fa;--surface:#ffffff;--s2:#ede8f5;
+  --ink:#1a1628;--ink2:#5a5470;--ink3:#8e88a0;
+  --accent:#a21caf;--accent2:#7c3aed;--accent3:#0891b2;
+  --neon:#c026d3;--neon-glow:rgba(192,38,211,.15);
+  --border:#d8d0e8;
+  --shadow-sm:0 1px 4px rgba(0,0,0,.06);
+  --shadow-md:0 4px 20px rgba(0,0,0,.1);
+  --shadow-lg:0 8px 40px rgba(0,0,0,.14);
+  --glow:0 0 15px rgba(192,38,211,.12);
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+button{font-family:'DM Sans',sans-serif;cursor:pointer}
+input{font-family:'DM Sans',sans-serif}
+
+/* ── LOADING ── */
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;z-index:9999;transition:opacity .6s,visibility .6s}
+#loading.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.ld-brand{font-family:'Syne',sans-serif;font-size:3.2rem;color:var(--ink);line-height:1;letter-spacing:-.02em}
+.ld-brand b{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ld-sub{font-size:.72rem;text-transform:uppercase;letter-spacing:.22em;color:var(--ink3)}
+.ld-bar{width:160px;height:2px;background:var(--border);border-radius:2px;overflow:hidden}
+.ld-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));animation:ldbar 2.5s ease forwards}
+@keyframes ldbar{to{width:100%}}
+
+/* ── HEADER ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1.2rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;box-shadow:var(--shadow-sm);z-index:200;gap:.8rem}
+.brand{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;line-height:1;color:var(--ink);letter-spacing:-.02em}
+.brand em{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-style:normal}
+.brand-sub{font-size:.58rem;color:var(--ink3);text-transform:uppercase;letter-spacing:.14em;margin-top:2px}
+.loc-pill{display:flex;align-items:center;gap:.4rem;background:var(--s2);border:1px solid var(--border);border-radius:100px;padding:.32rem .8rem;font-size:.72rem;color:var(--accent);font-weight:500}
+.loc-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 2s infinite;box-shadow:0 0 8px var(--neon-glow)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.hdr-right{display:flex;align-items:center;gap:.55rem;flex-shrink:0}
+
+/* Theme toggle */
+.theme-btn{background:var(--s2);border:1px solid var(--border);border-radius:100px;padding:.3rem .65rem;font-size:.68rem;color:var(--ink2);transition:all .2s;display:flex;align-items:center;gap:.3rem}
+.theme-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:var(--sidebar-w,380px) 5px 1fr;flex:1;overflow:hidden;min-height:0}
+.resize-handle{width:5px;background:transparent;cursor:col-resize;flex-shrink:0;position:relative;z-index:100;transition:background .15s}
+.resize-handle:hover,.resize-handle.dragging{background:var(--accent)}
+.sidebar{display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--surface);overflow:hidden;min-height:0}
+
+/* ── SEARCH ── */
+.search-wrap{padding:.65rem;border-bottom:1px solid var(--border);position:relative;flex-shrink:0}
+.s-icon{position:absolute;left:1.4rem;top:50%;transform:translateY(-50%);color:var(--ink3);font-size:.8rem;pointer-events:none}
+#searchInput{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r);padding:.52rem .9rem .52rem 2.1rem;font-size:.82rem;color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s}
+#searchInput:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--neon-glow)}
+#searchInput::placeholder{color:var(--ink3)}
+
+/* ── EVENT BANNER ── */
+.event-banner{flex-shrink:0;margin:.55rem;border-radius:var(--r);overflow:hidden;position:relative;cursor:pointer;background:linear-gradient(135deg,#1a0030 0%,#0d001a 60%,#150028 100%);border:1px solid rgba(192,38,211,.25);transition:transform .2s,box-shadow .2s}
+.event-banner:hover{transform:translateY(-1px);box-shadow:var(--glow)}
+.event-banner::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(192,38,211,.08),rgba(124,58,237,.06));pointer-events:none}
+.eb-body{position:relative;z-index:1;padding:.75rem .9rem}
+.eb-live{display:inline-flex;align-items:center;gap:.3rem;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);border-radius:100px;padding:.12rem .5rem;font-size:.55rem;font-weight:600;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem}
+.eb-live-dot{width:5px;height:5px;border-radius:50%;background:#ef4444;animation:blink 1.2s infinite}
+.eb-label{font-size:.55rem;text-transform:uppercase;letter-spacing:.18em;color:var(--accent);margin-bottom:.2rem;font-weight:500}
+.eb-name{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;color:#fff;line-height:1.2;margin-bottom:.2rem}
+html.light .eb-name{color:var(--ink)}
+.eb-desc{font-size:.68rem;color:rgba(255,255,255,.6);line-height:1.4;margin-bottom:.4rem}
+html.light .eb-desc{color:var(--ink2)}
+.eb-tags{display:flex;gap:.35rem;flex-wrap:wrap}
+.eb-tag{background:rgba(192,38,211,.15);border:1px solid rgba(192,38,211,.3);border-radius:100px;padding:.13rem .5rem;font-size:.58rem;color:var(--accent);font-weight:500}
+.eb-tag.promo{background:rgba(250,204,21,.12);border-color:rgba(250,204,21,.35);color:var(--gold)}
+.eb-tag.artist{background:rgba(6,182,212,.12);border-color:rgba(6,182,212,.35);color:var(--accent3)}
+
+/* ── CATEGORIES ── */
+.cat-scroll{flex-shrink:0;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);padding:.5rem .6rem;display:flex;gap:.28rem}
+.cat-scroll::-webkit-scrollbar{display:none}
+.cat-btn{background:var(--s2);border:1.5px solid var(--border);border-radius:100px;padding:.24rem .68rem;font-size:.68rem;color:var(--ink2);white-space:nowrap;transition:all .17s;font-weight:400}
+.cat-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cat-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+
+/* ── FILTER BAR ── */
+.filter-bar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:.38rem .6rem;border-bottom:1px solid var(--border);background:var(--s2);gap:.4rem;flex-wrap:wrap}
+.fb-left{display:flex;align-items:center;gap:.4rem;font-size:.66rem;color:var(--ink2)}
+.active-ct{background:var(--accent);color:#fff;border-radius:100px;padding:.06rem .4rem;font-size:.6rem;font-weight:600;display:none}
+.active-ct.on{display:inline}
+.sort-row{display:flex;gap:.25rem}
+.sort-btn,.ftoggle-btn{background:transparent;border:1px solid var(--border);border-radius:100px;padding:.2rem .58rem;font-size:.66rem;color:var(--ink2);transition:all .17s}
+.sort-btn:hover,.ftoggle-btn:hover{border-color:var(--accent);color:var(--accent)}
+.sort-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ── ADV FILTERS ── */
+.adv{overflow:hidden;transition:max-height .3s ease;border-bottom:1px solid var(--border);flex-shrink:0}
+.adv.open{max-height:130px}.adv.closed{max-height:0}
+.adv-inner{padding:.5rem .6rem;display:flex;flex-direction:column;gap:.4rem}
+.frow{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.fl{font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);min-width:44px}
+.chips{display:flex;gap:.24rem;flex-wrap:wrap}
+.chip{background:var(--s2);border:1px solid var(--border);border-radius:100px;padding:.17rem .56rem;font-size:.66rem;color:var(--ink2);transition:all .16s}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.chip.vip.active{background:var(--gold);border-color:var(--gold);color:#000}
+.chip.chill.active{background:var(--green);border-color:var(--green);color:#fff}
+
+/* ── RANGE SLIDER ── */
+.range-wrap{display:flex;align-items:center;gap:.5rem;padding:.38rem .6rem;border-bottom:1px solid var(--border);background:var(--s2);flex-shrink:0}
+.range-label{font-size:.66rem;color:var(--ink2);white-space:nowrap}
+.range-val{font-size:.66rem;font-weight:600;color:var(--accent);white-space:nowrap;min-width:52px;text-align:right}
+#radiusSlider{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:var(--border);outline:none;cursor:pointer}
+#radiusSlider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);box-shadow:0 0 8px var(--neon-glow);cursor:pointer}
+#radiusSlider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);box-shadow:0 0 8px var(--neon-glow);cursor:pointer}
+
+/* ── RESULTS BAR ── */
+.results-bar{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:.34rem .6rem;border-bottom:1px solid var(--border)}
+.rb-label{font-size:.62rem;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em}
+#resultsCount{color:var(--accent);font-weight:700}
+#filterSummary{font-size:.6rem;color:var(--ink3)}
+
+/* ── CARDS ── */
+.list{flex:1;overflow-y:auto;padding:.55rem;display:flex;flex-direction:column;gap:.4rem;scrollbar-width:thin;scrollbar-color:var(--border) transparent;min-height:0}
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:.68rem .85rem;cursor:pointer;transition:all .2s;animation:fadeUp .3s ease both;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:3px;border-radius:0 2px 2px 0;opacity:0;transition:opacity .2s}
+.card:hover{border-color:var(--accent);box-shadow:var(--glow);transform:translateY(-1px)}
+.card:hover::before{opacity:1;background:var(--accent)!important}
+.card.has-event{border-color:rgba(192,38,211,.2)}
+.card.has-event::before{opacity:1;background:linear-gradient(180deg,var(--accent),var(--accent2))}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:.4rem;margin-bottom:.2rem}
+.card-name{font-weight:600;font-size:.88rem;line-height:1.25;flex:1;min-width:0;word-break:break-word}
+.vibe-tag{font-size:.56rem;font-weight:600;padding:.12rem .42rem;border-radius:100px;white-space:nowrap;letter-spacing:.04em;flex-shrink:0}
+.vt-exclusive{background:rgba(250,204,21,.12);color:var(--gold);border:1px solid rgba(250,204,21,.3)}
+.vt-popular{background:rgba(192,38,211,.12);color:var(--accent);border:1px solid rgba(192,38,211,.3)}
+.vt-chill{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+
+.card-meta{display:flex;align-items:center;gap:.24rem;flex-wrap:wrap;margin-bottom:.15rem}
+.tag{font-size:.6rem;padding:.1rem .4rem;border-radius:100px;background:var(--s2);border:1px solid var(--border);color:var(--ink2)}
+.card-dist{font-size:.64rem;color:var(--ink3);margin-left:auto;white-space:nowrap}
+.card-addr{margin-top:.14rem;font-size:.68rem;color:var(--ink3);line-height:1.4}
+.card-desc{margin-top:.28rem;font-size:.68rem;color:var(--ink2);line-height:1.45;font-style:italic;border-top:1px solid var(--s2);padding-top:.28rem}
+
+/* Event strip on card */
+.card-event{margin-top:.35rem;background:linear-gradient(135deg,rgba(192,38,211,.08),rgba(124,58,237,.06));border:1px solid rgba(192,38,211,.2);border-radius:8px;padding:.4rem .55rem}
+.ce-header{display:flex;align-items:center;gap:.3rem;margin-bottom:.15rem}
+.ce-icon{font-size:.7rem}
+.ce-title{font-size:.65rem;font-weight:600;color:var(--accent)}
+.ce-detail{font-size:.62rem;color:var(--ink2);line-height:1.4}
+.ce-promo{display:inline-flex;align-items:center;gap:.2rem;background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.25);border-radius:100px;padding:.08rem .4rem;font-size:.56rem;color:var(--gold);font-weight:500;margin-top:.2rem}
+
+.msg{padding:2rem 1rem;text-align:center;color:var(--ink3)}
+.msg .ico{font-size:2rem;margin-bottom:.6rem}
+.msg h3{font-family:'Syne',sans-serif;font-size:1.15rem;color:var(--ink);margin-bottom:.3rem}
+.msg p{font-size:.75rem;line-height:1.6}
+
+/* ── MAP ── */
+#map-wrap{position:relative;flex:1;min-height:0;overflow:hidden}
+#map{width:100%;height:100%;will-change:transform}
+.gm-style .gm-style-iw-c{border-radius:12px!important;box-shadow:var(--shadow-lg)!important;border:1px solid var(--border)!important;padding:0!important;background:var(--surface)!important}
+.gm-style .gm-style-iw-d{font-family:'DM Sans',sans-serif!important;font-size:.8rem!important;line-height:1.5!important;overflow:hidden!important;padding:10px 14px!important}
+.gm-style .gm-style-iw-t::after{display:none}
+.gm-ui-hover-effect{top:2px!important;right:2px!important}
+.pop-name{font-weight:700;color:var(--ink);margin-bottom:.08rem}
+.pop-cat{font-size:.66rem;color:var(--ink3)}
+.pop-vibe{font-size:.64rem;font-weight:600;margin-top:.08rem}
+.pop-addr{font-size:.64rem;color:var(--ink3);margin-top:.06rem}
+.pop-event{font-size:.62rem;color:var(--accent);font-weight:500;margin-top:.2rem;padding-top:.2rem;border-top:1px solid var(--border)}
+
+.map-legend{position:absolute;bottom:26px;right:10px;z-index:500;background:rgba(17,17,24,.88);border:1px solid var(--border);border-radius:10px;padding:.45rem .65rem;font-size:.6rem;color:var(--ink2);backdrop-filter:blur(8px);box-shadow:var(--shadow-sm)}
+html.light .map-legend{background:rgba(255,255,255,.92)}
+.leg-row{display:flex;align-items:center;gap:.35rem;margin-bottom:.15rem}
+.leg-row:last-child{margin-bottom:0}
+.leg-dot{width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.3);box-shadow:0 1px 4px rgba(0,0,0,.4);flex-shrink:0}
+
+/* ── MOBILE ── */
+#mob-map-widget{display:none}
+.map-legend{display:none}
+#map-wrap .map-legend{display:block}
+
+@media(max-width:700px){
+  html{height:100%}
+  body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:auto}
+  header{position:sticky;top:0;z-index:300;padding:.45rem .8rem;flex-wrap:nowrap;gap:.4rem}
+  .brand{font-size:1.25rem}
+  .brand-sub{display:none}
+  .loc-pill{padding:.24rem .6rem;font-size:.66rem;white-space:nowrap;flex-shrink:0}
+  .layout{display:block;overflow:visible}
+  .sidebar{display:flex;flex-direction:column;width:100%;overflow:visible;border-right:none;min-height:0}
+  #map-wrap{display:none!important}
+  .search-wrap{padding:.48rem .7rem}
+  #searchInput{font-size:16px;padding:.48rem .85rem .48rem 2rem}
+  .event-banner{margin:.45rem .6rem .25rem}
+  .cat-scroll{flex-shrink:0}
+  .filter-bar{padding:.35rem .7rem;gap:.25rem;flex-wrap:wrap}
+  .results-bar{padding:.28rem .7rem}
+  .adv{flex-shrink:0}
+  .sort-row{flex-wrap:wrap;gap:.2rem}
+  .sort-btn,.ftoggle-btn{padding:.24rem .6rem;font-size:.69rem}
+  .cat-btn{padding:.28rem .72rem;font-size:.72rem}
+  .list{flex:none;overflow-y:visible;padding:.4rem .6rem 3rem;min-height:120px}
+  .card{padding:.65rem .82rem;min-width:0}
+  .card-name{white-space:normal;word-break:break-word;overflow:visible;text-overflow:unset;min-width:0;flex:1}
+  .card-desc{display:none}
+  #mob-map-widget{display:block;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border)}
+  .map-ctrl-bar{display:flex;align-items:center;justify-content:space-between;padding:.35rem .7rem;background:var(--s2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);gap:.5rem}
+  .map-ctrl-left{display:flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:600;color:var(--ink2)}
+  .map-ctrl-left svg{flex-shrink:0}
+  .map-ctrl-right{display:flex;gap:.24rem;align-items:center}
+  .map-state-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:100px;padding:.2rem .55rem;font-size:.65rem;font-weight:500;color:var(--ink2);transition:all .15s;white-space:nowrap}
+  .map-state-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .map-state-btn[data-state="normal"].is-active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .map-state-btn[data-state="fullscreen"].is-active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+  .map-state-btn[data-state="closed"].is-active{background:var(--ink3);border-color:var(--ink3);color:#fff}
+  .map-box{overflow:hidden;height:0;transition:height var(--map-transition);position:relative}
+  .map-box #map{position:absolute;inset:0;width:100%;height:100%}
+  .map-box .map-legend{display:block;position:absolute;bottom:8px;right:8px;top:auto;font-size:.56rem;padding:.24rem .44rem;z-index:500}
+  #mob-map-widget.is-fullscreen{position:fixed;inset:0;z-index:800;display:flex;flex-direction:column;border:none}
+  #mob-map-widget.is-fullscreen .map-ctrl-bar{flex-shrink:0;box-shadow:var(--shadow-md);border-top:none}
+  #mob-map-widget.is-fullscreen .map-box{flex:1;height:auto!important;transition:none}
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="ld-brand">Jangueo<b>RD</b></div>
+  <div class="ld-sub">Tu noche empieza aquí</div>
+  <div class="ld-bar"><div class="ld-fill"></div></div>
+  <div style="font-size:.72rem;color:var(--ink3)" id="loadMsg">Detectando tu ubicación...</div>
+</div>
+
+<header>
+  <div>
+    <div class="brand">Jangueo<em>RD</em></div>
+    <div class="brand-sub">Discotecas · Bares · Entretenimiento</div>
+  </div>
+  <div class="hdr-right">
+    <div class="loc-pill">
+      <div class="loc-dot"></div>
+      <span id="cityName">Detectando...</span>
+    </div>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+      <span id="themeIcon">☀</span>
+    </button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+
+    <div class="search-wrap">
+      <span class="s-icon">&#9906;</span>
+      <input id="searchInput" type="text" placeholder="Buscar lugar, evento, artista, zona..." oninput="debounceFilter()"/>
+    </div>
+
+    <div id="mob-map-widget">
+      <div class="map-ctrl-bar">
+        <div class="map-ctrl-left">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          Mapa
+        </div>
+        <div class="map-ctrl-right">
+          <button class="map-state-btn" data-state="normal" onclick="setMapState('normal')">&#9974; Normal</button>
+          <button class="map-state-btn" data-state="fullscreen" onclick="setMapState('fullscreen')">&#x26F6; Expandir</button>
+          <button class="map-state-btn" data-state="closed" onclick="setMapState('closed')">&#x2715; Cerrar</button>
+        </div>
+      </div>
+      <div class="map-box" id="mapBox">
+        <div id="map"></div>
+        <div class="map-legend">
+          <div class="leg-row"><div class="leg-dot" style="background:#c026d3"></div>Discotecas</div>
+          <div class="leg-row"><div class="leg-dot" style="background:#7c3aed"></div>Bares / Lounges</div>
+          <div class="leg-row"><div class="leg-dot" style="background:#06b6d4"></div>Rooftops</div>
+          <div class="leg-row"><div class="leg-dot" style="background:#facc15"></div>Entretenimiento</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event banner (dinámico) -->
+    <div class="event-banner" id="eventBanner" style="display:none"></div>
+
+    <div class="cat-scroll" id="catsEl"></div>
+
+    <div class="filter-bar">
+      <div class="fb-left">
+        <span>Filtros</span>
+        <span class="active-ct" id="activeCt">0</span>
+      </div>
+      <div style="display:flex;gap:.28rem;align-items:center;flex-wrap:wrap">
+        <div class="sort-row" id="sortRow">
+          <button class="sort-btn active" data-sort="hot" onclick="setSort(this)">&#128293; Hot</button>
+          <button class="sort-btn" data-sort="dist" onclick="setSort(this)">Cercanos</button>
+          <button class="sort-btn" data-sort="az" onclick="setSort(this)">A-Z</button>
+        </div>
+        <button class="ftoggle-btn" id="ftoggleBtn" onclick="toggleAdv()">+ Filtrar</button>
+      </div>
+    </div>
+
+    <div class="range-wrap">
+      <span class="range-label">&#128205; Radio</span>
+      <input type="range" id="radiusSlider" min="500" max="15000" step="500" value="5000"/>
+      <span class="range-val" id="radiusVal">5 km</span>
+    </div>
+
+    <div class="adv closed" id="advFilters">
+      <div class="adv-inner">
+        <div class="frow">
+          <span class="fl">Vibe</span>
+          <div class="chips" id="vibeChips">
+            <button class="chip active" data-val="Todos" onclick="setFilter('vibe',this)">Todas</button>
+            <button class="chip vip" data-val="Exclusivo" onclick="setFilter('vibe',this)">Exclusivo</button>
+            <button class="chip" data-val="Popular" onclick="setFilter('vibe',this)">Popular</button>
+            <button class="chip chill" data-val="Chill" onclick="setFilter('vibe',this)">Chill</button>
+          </div>
+        </div>
+        <div class="frow">
+          <span class="fl">Hoy</span>
+          <div class="chips">
+            <button class="chip" id="eventOnlyChip" onclick="toggleEventFilter(this)">&#127775; Solo con eventos</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-bar">
+      <span class="rb-label"><span id="resultsCount">—</span> lugares</span>
+      <span id="filterSummary"></span>
+    </div>
+
+    <div class="list" id="listEl">
+      <div class="msg">
+        <div class="ico">&#127774;</div>
+        <h3>Cargando la noche...</h3>
+        <p>Acepta el permiso de ubicación para ver los mejores spots cerca de ti.</p>
+      </div>
+    </div>
+
+  </aside>
+
+  <div class="resize-handle" id="resizeHandle"></div>
+  <div id="map-wrap">
+    <div class="map-legend">
+      <div class="leg-row"><div class="leg-dot" style="background:#c026d3"></div>Discotecas</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#7c3aed"></div>Bares / Lounges</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#06b6d4"></div>Rooftops</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#facc15"></div>Entretenimiento</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let RADIUS_M = 5000;
+const VIBE_ORDER  = {Exclusivo:0,Popular:1,Chill:2};
+const VIBE_LABEL  = {Exclusivo:'Exclusivo',Popular:'Popular',Chill:'Chill'};
+const VIBE_COLOR  = {Exclusivo:'#facc15',Popular:'#c026d3',Chill:'#22c55e'};
+const CAT_COLOR   = {Discoteca:'#c026d3','Bar / Lounge':'#7c3aed',Rooftop:'#06b6d4',Karaoke:'#facc15',Bowling:'#facc15',Billar:'#facc15',Standup:'#facc15'};
+const CATS = ['Todos','Discoteca','Bar / Lounge','Rooftop','Karaoke','Bowling','Billar','Standup'];
+
+// ═══════════════════════════════════════
+// BASE DE DATOS — Lugares
+// ═══════════════════════════════════════
+const DB = [
+  // ── DISCOTECAS ──
+  {id:'d01',name:'Jet Set',cat:'Discoteca',vibe:'Exclusivo',addr:'Av. Abraham Lincoln, Piantini',phone:'809-563-3030',lat:18.4835,lng:-69.9398,desc:'El club mas exclusivo de Santo Domingo. DJs internacionales, VIP con botellas premium y dress code estricto. La elite se reune aqui cada viernes y sabado.',hot:true,
+   event:{title:'DJ Adoni en vivo',detail:'Este viernes desde las 11PM. Set especial de 3 horas.',promo:'Mujeres gratis antes de medianoche',artist:'DJ Adoni'}},
+  {id:'d02',name:'Room 504',cat:'Discoteca',vibe:'Exclusivo',addr:'Av. Abraham Lincoln 1001, Piantini (2do piso)',phone:'809-563-2400',lat:18.4842,lng:-69.9396,desc:'Club lounge sobre La Cassina. Terraza con techo retractil, DJs internacionales jueves a domingo. El lugar de moda.',hot:true,
+   event:{title:'Noche Latina Especial',detail:'Sabado: reggaeton, dembow y salsa con DJ invitado de PR.',promo:'2x1 en tragos hasta las 12AM',artist:null}},
+  {id:'d03',name:'Capitolio Club',cat:'Discoteca',vibe:'Popular',addr:'Av. 27 de Febrero, Santo Domingo',phone:'',lat:18.4788,lng:-69.9340,desc:'Discoteca popular con ambiente de dembow y reggaeton. Pista grande, luces LED y shows en tarima. Accesible y divertido.',hot:true,
+   event:null},
+  {id:'d04',name:'Praia Lounge',cat:'Discoteca',vibe:'Exclusivo',addr:'Av. Winston Churchill, Piantini',phone:'',lat:18.4775,lng:-69.9462,desc:'Concepto beach club nocturno. Pool parties los domingos, noches tematicas y cocteleria premium.',hot:true,
+   event:{title:'Sunday Pool Party',detail:'Domingo 2PM-10PM. Bikini vibes, open bar opcional ($2,500 RD).',promo:'Grupos de 4+ pagan 3',artist:null}},
+  {id:'d05',name:'Jubilee',cat:'Discoteca',vibe:'Popular',addr:'Zona Colonial, Santo Domingo',phone:'',lat:18.4737,lng:-69.8855,desc:'Disco en la Zona Colonial con musica variada: merengue, salsa, bachata y lo mejor del urbano. Turistas y locales.',hot:false,
+   event:null},
+  {id:'d06',name:'Onnos Club',cat:'Discoteca',vibe:'Popular',addr:'Av. Venezuela, Santo Domingo Este',phone:'',lat:18.4820,lng:-69.8660,desc:'La disco mas grande de SD Este. Dos pisos, tres barras y capacidad para 1,500 personas.',hot:false,
+   event:{title:'Noche de Dembow',detail:'Viernes: los mejores exponentes del genero en vivo.',promo:'Cover RD$300 incluye 1 trago',artist:null}},
+  {id:'d07',name:'La Guácara Taina',cat:'Discoteca',vibe:'Popular',addr:'Av. Mirador del Sur, Parque Mirador',phone:'809-533-1051',lat:18.4555,lng:-69.9340,desc:'Discoteca dentro de una cueva natural. Experiencia unica en el mundo. Tres niveles con musica diferente.',hot:true,
+   event:null},
+
+  // ── BARES / LOUNGES ──
+  {id:'b01',name:'Lulo Gin Bar',cat:'Bar / Lounge',vibe:'Exclusivo',addr:'C. Gustavo Mejia Ricart, Piantini',phone:'',lat:18.4750,lng:-69.9388,desc:'Bar de autor con mas de 40 gins artesanales. Cocteleria molecular y ambiente sofisticado. El mejor gin bar del Caribe.',hot:true,
+   event:{title:'Gin Masterclass',detail:'Jueves 8PM. Aprende a preparar 5 cocteles con el bartender estrella.',promo:'RD$1,500 incluye degustacion',artist:null}},
+  {id:'b02',name:'El Buho Cafe',cat:'Bar / Lounge',vibe:'Chill',addr:'C. Hostos, Zona Colonial',phone:'',lat:18.4736,lng:-69.8850,desc:'Bar bohemio con personalidad unica. Cocktails artesanales, musica en vivo y el dueno atiende personalmente.',hot:false,
+   event:{title:'Jazz en Vivo',detail:'Viernes 9PM. Trio de jazz dominicano.',promo:null,artist:'Trio Cafe Jazz'}},
+  {id:'b03',name:'Onno\'s Tapas Bar',cat:'Bar / Lounge',vibe:'Exclusivo',addr:'C. Arzobispo Nouel, Zona Colonial',phone:'',lat:18.4742,lng:-69.8848,desc:'Tapas espanolas con cocteleria premium en la Zona Colonial. Terraza romantica y vinos selectos.',hot:false,
+   event:null},
+  {id:'b04',name:'Porter House',cat:'Bar / Lounge',vibe:'Exclusivo',addr:'C. Jose Brea Pena, Piantini',phone:'',lat:18.4760,lng:-69.9395,desc:'Whiskey bar con mas de 100 etiquetas. Puros, jazz suave y ambiente de caballeros. Dress code smart casual.',hot:false,
+   event:null},
+  {id:'b05',name:'Shots SD',cat:'Bar / Lounge',vibe:'Popular',addr:'Av. Abraham Lincoln, Piantini',phone:'',lat:18.4828,lng:-69.9385,desc:'El bar de shots mas divertido de SD. +50 combinaciones, retos grupales y happy hour agresivo.',hot:true,
+   event:{title:'Happy Hour Extremo',detail:'Lunes a jueves 6-9PM.',promo:'Todos los shots a mitad de precio',artist:null}},
+  {id:'b06',name:'La Espiral Bar',cat:'Bar / Lounge',vibe:'Chill',addr:'C. Las Mercedes, Zona Colonial',phone:'',lat:18.4730,lng:-69.8842,desc:'Bar artsy con exposiciones rotativas. Cocteles con ingredientes locales y noches de poesia.',hot:false,
+   event:null},
+  {id:'b07',name:'Segovia Gastropub',cat:'Bar / Lounge',vibe:'Popular',addr:'Av. Lope de Vega, Naco',phone:'',lat:18.4780,lng:-69.9320,desc:'Gastropub con cervezas artesanales dominicanas. Nachos, wings y pantallas gigantes para deportes.',hot:false,
+   event:null},
+
+  // ── ROOFTOPS ──
+  {id:'r01',name:'Sky Bar by NH',cat:'Rooftop',vibe:'Exclusivo',addr:'Hotel NH Real Arena, Av. Bolivar',phone:'',lat:18.4700,lng:-69.9010,desc:'Rooftop con vista 360° de Santo Domingo. Cocteleria premium, DJ set al atardecer y dress code. El sunset spot #1.',hot:true,
+   event:{title:'Sunset Sessions',detail:'Jueves y viernes desde las 6PM. DJ set + atardecer + brindis.',promo:'Ladies night jueves: 2x1 en cocktails para mujeres',artist:'DJ Romy'}},
+  {id:'r02',name:'Pata Negra Rooftop',cat:'Rooftop',vibe:'Exclusivo',addr:'Zona Colonial, Santo Domingo',phone:'',lat:18.4735,lng:-69.8858,desc:'Tapas y vinos espanoles con vista al casco historico. Atardecer espectacular y ambiente europeo.',hot:false,
+   event:null},
+  {id:'r03',name:'El Catador Wine Bar',cat:'Rooftop',vibe:'Chill',addr:'C. La Atarazana, Zona Colonial',phone:'',lat:18.4731,lng:-69.8815,desc:'Terraza elevada frente a Plaza Espana. Catas de vino, tabla de quesos y musica acustica.',hot:false,
+   event:{title:'Cata de Vinos',detail:'Sabado 7PM. 6 vinos de Espana, Francia e Italia.',promo:'RD$2,000 por persona, incluye tabla de quesos',artist:null}},
+
+  // ── KARAOKES ──
+  {id:'k01',name:'KTV Karaoke Box',cat:'Karaoke',vibe:'Popular',addr:'Av. Abraham Lincoln, Piantini',phone:'',lat:18.4822,lng:-69.9392,desc:'Karaoke privado estilo japones. Salas VIP con pantalla gigante, luces disco y servicio de tragos.',hot:true,
+   event:{title:'Noche de Karaoke Battle',detail:'Viernes 9PM. Gana premios cantando.',promo:'Sala VIP 2 horas por RD$3,000 (hasta 8 personas)',artist:null}},
+  {id:'k02',name:'Karaoke Star',cat:'Karaoke',vibe:'Popular',addr:'Av. 27 de Febrero, Santo Domingo',phone:'',lat:18.4792,lng:-69.9345,desc:'Karaoke abierto con escenario. Si te atreves a cantar frente a todos, este es tu lugar.',hot:false,
+   event:null},
+
+  // ── BOWLING ──
+  {id:'bw01',name:'Sebelen Bowling Center',cat:'Bowling',vibe:'Popular',addr:'Av. Tiradentes, Naco',phone:'809-732-0636',lat:18.4795,lng:-69.9270,desc:'18 pistas, bar, arcade y billar. El centro de entretenimiento mas completo de SD. Ideal para grupos.',hot:true,
+   event:{title:'Cosmic Bowling',detail:'Viernes y sabado 10PM. Luces neon, musica y tragos.',promo:'2 horas de bowling + zapatos RD$800',artist:null}},
+  {id:'bw02',name:'Bowlero',cat:'Bowling',vibe:'Popular',addr:'Agora Mall, Av. Abraham Lincoln',phone:'',lat:18.4825,lng:-69.9378,desc:'Bowling moderno dentro de Agora Mall. Pantallas interactivas y menu de bar completo.',hot:false,
+   event:null},
+
+  // ── BILLAR ──
+  {id:'bi01',name:'Brickell Billiards',cat:'Billar',vibe:'Chill',addr:'Piantini, Santo Domingo',phone:'',lat:18.4758,lng:-69.9405,desc:'Billar premium con mesas Brunswick. Whiskey bar, ambiente sofisticado y torneos semanales.',hot:false,
+   event:{title:'Torneo de Pool',detail:'Miercoles 8PM. Inscripcion RD$500.',promo:'Primer lugar gana RD$5,000',artist:null}},
+
+  // ── STANDUP ──
+  {id:'s01',name:'La Casa del Humor',cat:'Standup',vibe:'Popular',addr:'Zona Colonial, Santo Domingo',phone:'',lat:18.4740,lng:-69.8865,desc:'El primer club de comedia de RD. Shows jueves a sabado. Comediantes locales e internacionales.',hot:true,
+   event:{title:'Raymond Pozo & Miguel Céspedes',detail:'Sabado 9PM. Show especial de 2 horas. Solo este fin de semana.',promo:'Early bird: RD$800 (regular RD$1,200)',artist:'Raymond y Miguel'}},
+  {id:'s02',name:'Comedy Club SD',cat:'Standup',vibe:'Chill',addr:'Av. Sarasota, Bella Vista',phone:'',lat:18.4610,lng:-69.9380,desc:'Comedia en ingles y espanol. Open mic los martes, shows profesionales jueves a sabado.',hot:false,
+   event:{title:'Open Mic Night',detail:'Martes 8PM. Abierto a todos. 5 minutos en el mic.',promo:'Entrada gratis + primer trago RD$100',artist:null}},
+];
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let map, allPlaces = [];
+const markerMap = new Map();
+let userLat = 18.4741, userLng = -69.9307;
+let activeFilters = {cat:'Todos', vibe:'Todos', sort:'hot', eventOnly:false};
+
+let _domReady = false, _mapsReady = false, _pendingBoot = null;
+function _tryBoot() { if (_domReady && _mapsReady && _pendingBoot) _pendingBoot(); }
+window.onGoogleMapsReady = function() { _mapsReady = true; _tryBoot(); };
+
+window.addEventListener('DOMContentLoaded', () => {
+  buildCategories();
+  window._sortBtns = Array.from(document.querySelectorAll('#sortRow .sort-btn'));
+  window._vibeChips = Array.from(document.querySelectorAll('#vibeChips .chip'));
+  window._catBtns = [];
+  updateThemeIcon();
+  if (!navigator.geolocation) {
+    _pendingBoot = () => startDefault();
+  } else {
+    navigator.geolocation.getCurrentPosition(
+      pos => { userLat = pos.coords.latitude; userLng = pos.coords.longitude; _pendingBoot = () => boot(); _tryBoot(); },
+      ()   => { _pendingBoot = () => { startDefault(); document.getElementById('cityName').textContent = 'Santo Domingo'; }; _tryBoot(); },
+      {enableHighAccuracy:true, timeout:12000, maximumAge:0}
+    );
+  }
+  _domReady = true;
+  _tryBoot();
+});
+
+function startDefault() { ensurePlaced(); initMap(userLat, userLng); mergeLoad(userLat, userLng); }
+function boot()         { ensurePlaced(); initMap(userLat, userLng); reverseGeocode(userLat, userLng); mergeLoad(userLat, userLng); }
+
+// ═══════════════════════════════════════
+// MAP
+// ═══════════════════════════════════════
+const DARK_MAP_STYLE = [
+  {elementType:'geometry',stylers:[{color:'#0f0d1a'}]},
+  {elementType:'labels.text.stroke',stylers:[{color:'#0f0d1a'}]},
+  {elementType:'labels.text.fill',stylers:[{color:'#5a5470'}]},
+  {featureType:'road',elementType:'geometry',stylers:[{color:'#1a1828'}]},
+  {featureType:'road',elementType:'geometry.stroke',stylers:[{color:'#22203a'}]},
+  {featureType:'water',elementType:'geometry',stylers:[{color:'#080818'}]},
+  {featureType:'poi',elementType:'labels',stylers:[{visibility:'off'}]},
+  {featureType:'transit',elementType:'labels',stylers:[{visibility:'off'}]}
+];
+
+function initMap(lat, lng) {
+  const isDark = !document.documentElement.classList.contains('light');
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat, lng }, zoom: 14, minZoom: 8, maxZoom: 19,
+    restriction: { latLngBounds: { north:20.10, south:17.36, west:-72.10, east:-68.10 }, strictBounds: true },
+    mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+    styles: isDark ? DARK_MAP_STYLE : [
+      {featureType:'poi',elementType:'labels',stylers:[{visibility:'off'}]},
+      {featureType:'transit',elementType:'labels',stylers:[{visibility:'off'}]}
+    ]
+  });
+
+  new google.maps.Marker({
+    position: { lat, lng }, map,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale:8, fillColor:'#c026d3', fillOpacity:1, strokeColor:'#fff', strokeWeight:3 },
+    title:'Estás aquí', zIndex:999
+  });
+
+  window.radiusCircle = new google.maps.Circle({
+    map, center:{lat,lng}, radius:RADIUS_M,
+    strokeColor:'#c026d3', strokeOpacity:0.5, strokeWeight:1,
+    fillColor:'#c026d3', fillOpacity:0.03
+  });
+
+  map.addListener('click', function() {
+    if (_activeMarker) { _activeMarker.setIcon(markerIcon(_activeMarker._color, false)); _activeMarker = null; }
+    if (_activeInfoWindow) { _activeInfoWindow.close(); _activeInfoWindow = null; }
+  });
+
+  (function(){
+    const slider = document.getElementById('radiusSlider');
+    const label  = document.getElementById('radiusVal');
+    function fmtR(m){ return m>=1000?(m/1000).toFixed(1).replace('.0','')+' km':m+' m'; }
+    let _reloadTimer;
+    slider.addEventListener('input', function(){
+      RADIUS_M = parseInt(this.value);
+      label.textContent = fmtR(RADIUS_M);
+      window.radiusCircle.setRadius(RADIUS_M);
+      applyFilters();
+    });
+  })();
+
+  if (typeof initMobileWidget === 'function') initMobileWidget();
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ location:{lat,lng}, language:'es' }, (results, status) => {
+      if (status === 'OK' && results[0]) {
+        const comp = results[0].address_components;
+        const city = comp.find(c => c.types.includes('locality') || c.types.includes('administrative_area_level_2'));
+        document.getElementById('cityName').textContent = city ? city.long_name : 'RD';
+      } else { document.getElementById('cityName').textContent = 'RD'; }
+    });
+  } catch { document.getElementById('cityName').textContent = 'RD'; }
+}
+
+// ═══════════════════════════════════════
+// DATA LOADING
+// ═══════════════════════════════════════
+async function mergeLoad(lat, lng) {
+  document.getElementById('loadMsg').textContent = 'Encontrando los mejores spots...';
+  if (allPlaces.length === 0) {
+    DB.forEach(r => {
+      const entry = {...r, dist: haversine(lat, lng, r.lat, r.lng)};
+      allPlaces.push(entry);
+      createMarker(entry);
+    });
+  } else {
+    allPlaces.forEach(r => { r.dist = haversine(lat, lng, r.lat, r.lng); });
+  }
+  hideLoading();
+  showEventBanner();
+  requestAnimationFrame(() => applyFilters());
+}
+
+function showEventBanner() {
+  // Find the hottest event to feature
+  const withEvents = DB.filter(r => r.event && r.hot);
+  if (!withEvents.length) return;
+  const feat = withEvents[Math.floor(Math.random() * withEvents.length)];
+  const el = document.getElementById('eventBanner');
+  const promoTag = feat.event.promo ? `<span class="eb-tag promo">&#127381; ${feat.event.promo}</span>` : '';
+  const artistTag = feat.event.artist ? `<span class="eb-tag artist">&#127908; ${feat.event.artist}</span>` : '';
+  el.innerHTML = `<div class="eb-body">
+    <div class="eb-live"><div class="eb-live-dot"></div>Evento</div>
+    <div class="eb-label">${feat.name}</div>
+    <div class="eb-name">${feat.event.title}</div>
+    <div class="eb-desc">${feat.event.detail}</div>
+    <div class="eb-tags">${promoTag}${artistTag}<span class="eb-tag">${feat.cat}</span></div>
+  </div>`;
+  el.style.display = 'block';
+  el.onclick = () => focusPlace(feat);
+}
+
+// ═══════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════
+let _filterTimer;
+function debounceFilter(){ clearTimeout(_filterTimer); _filterTimer = setTimeout(applyFilters, 120); }
+
+function applyFilters() {
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+  const {cat, vibe, sort, eventOnly} = activeFilters;
+  const visible = allPlaces.filter(r => {
+    const dist = haversine(userLat, userLng, r.lat, r.lng);
+    r.dist = dist;
+    if (dist > RADIUS_M) return false;
+    if (cat !== 'Todos' && r.cat !== cat) return false;
+    if (vibe !== 'Todos' && r.vibe !== vibe) return false;
+    if (eventOnly && !r.event) return false;
+    if (query) {
+      const s = [r.name, r.cat, r.desc, r.addr, r.event?.title, r.event?.artist, r.event?.detail, r.event?.promo].filter(Boolean).join(' ').toLowerCase();
+      if (!s.includes(query)) return false;
+    }
+    return true;
+  });
+  if (sort === 'hot') visible.sort((a,b) => (b.hot?1:0)-(a.hot?1:0) || (b.event?1:0)-(a.event?1:0) || (VIBE_ORDER[a.vibe]??3)-(VIBE_ORDER[b.vibe]??3));
+  else if (sort === 'dist') visible.sort((a,b) => a.dist-b.dist);
+  else if (sort === 'az') visible.sort((a,b) => a.name.localeCompare(b.name));
+  renderList(visible);
+  syncMap(visible);
+  updateBadges(cat, vibe);
+}
+
+function renderList(items) {
+  const list = document.getElementById('listEl');
+  document.getElementById('resultsCount').textContent = items.length;
+  if (!items.length) {
+    list.innerHTML = `<div class="msg"><div class="ico">&#128566;</div><h3>Nada por aquí</h3><p>Prueba ampliando el radio o cambiando los filtros.</p></div>`;
+    return;
+  }
+  list.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  items.forEach((r,i) => {
+    const card = document.createElement('div');
+    card.className = 'card' + (r.event ? ' has-event' : '');
+    card.style.animationDelay = `${Math.min(i*15,280)}ms`;
+    const vibeHtml = r.vibe ? `<span class="vibe-tag vt-${r.vibe.toLowerCase()}">${VIBE_LABEL[r.vibe]}</span>` : '';
+    let eventHtml = '';
+    if (r.event) {
+      const promoLine = r.event.promo ? `<div class="ce-promo">&#127381; ${r.event.promo}</div>` : '';
+      const artistLine = r.event.artist ? ` — &#127908; ${r.event.artist}` : '';
+      eventHtml = `<div class="card-event">
+        <div class="ce-header"><span class="ce-icon">&#127775;</span><span class="ce-title">${r.event.title}</span></div>
+        <div class="ce-detail">${r.event.detail}${artistLine}</div>
+        ${promoLine}
+      </div>`;
+    }
+    card.innerHTML = `
+      <div class="card-top"><div class="card-name">${r.name}</div>${vibeHtml}</div>
+      <div class="card-meta">
+        <span class="tag">${r.cat}</span>
+        <span class="card-dist">${formatDist(r.dist)}</span>
+      </div>
+      ${r.addr ? `<div class="card-addr">${r.addr}</div>` : ''}
+      ${r.desc ? `<div class="card-desc">${r.desc}</div>` : ''}
+      ${eventHtml}
+    `;
+    card.addEventListener('click', () => focusPlace(r));
+    frag.appendChild(card);
+  });
+  list.appendChild(frag);
+}
+
+function syncMap(visible) {
+  if (!map) return;
+  const visibleIds = new Set(visible.map(r => r.id));
+  markerMap.forEach((m, id) => { m.setVisible(visibleIds.has(id)); });
+}
+
+// ═══════════════════════════════════════
+// MARKERS
+// ═══════════════════════════════════════
+function markerIcon(color, active) {
+  return { path: google.maps.SymbolPath.CIRCLE, scale: active ? 11 : 7,
+    fillColor: color, fillOpacity: 1,
+    strokeColor: 'rgba(255,255,255,0.85)', strokeWeight: active ? 2.5 : 1.5 };
+}
+
+let _activeInfoWindow = null, _activeMarker = null;
+
+function createMarker(r) {
+  const color = CAT_COLOR[r.cat] || '#c026d3';
+  const vibeColor = VIBE_COLOR[r.vibe] || '#c026d3';
+  const vibeLine = r.vibe ? `<div class="pop-vibe" style="color:${vibeColor}">${VIBE_LABEL[r.vibe]}</div>` : '';
+  const eventLine = r.event ? `<div class="pop-event">&#127775; ${r.event.title}</div>` : '';
+  const content = `<div class="pop-name">${r.name}</div><div class="pop-cat">${r.cat}</div>${vibeLine}${r.addr?`<div class="pop-addr">${r.addr}</div>`:''}${eventLine}`;
+  const m = new google.maps.Marker({
+    position: {lat:r.lat, lng:r.lng}, map,
+    icon: markerIcon(color, false), title: r.name
+  });
+  m._color = color; m._rid = r.id;
+  const infoWindow = new google.maps.InfoWindow({ content });
+  m.addListener('click', function() {
+    if (_activeMarker && _activeMarker !== m) _activeMarker.setIcon(markerIcon(_activeMarker._color, false));
+    if (_activeInfoWindow) _activeInfoWindow.close();
+    m.setIcon(markerIcon(color, true));
+    infoWindow.open(map, m);
+    _activeMarker = m; _activeInfoWindow = infoWindow;
+  });
+  markerMap.set(r.id, m);
+}
+
+function focusPlace(r) {
+  if (_activeMarker) { _activeMarker.setIcon(markerIcon(_activeMarker._color, false)); _activeMarker = null; }
+  if (_activeInfoWindow) { _activeInfoWindow.close(); _activeInfoWindow = null; }
+  const m = markerMap.get(r.id);
+  if (!m) return;
+  m.setVisible(true);
+  map.panTo({lat:r.lat, lng:r.lng});
+  map.setZoom(17);
+  setTimeout(() => {
+    const color = CAT_COLOR[r.cat] || '#c026d3';
+    const vibeColor = VIBE_COLOR[r.vibe] || '#c026d3';
+    const vibeLine = r.vibe ? `<div class="pop-vibe" style="color:${vibeColor}">${VIBE_LABEL[r.vibe]}</div>` : '';
+    const eventLine = r.event ? `<div class="pop-event">&#127775; ${r.event.title}</div>` : '';
+    const iw = new google.maps.InfoWindow({
+      content:`<div class="pop-name">${r.name}</div><div class="pop-cat">${r.cat}</div>${vibeLine}${r.addr?`<div class="pop-addr">${r.addr}</div>`:''}${eventLine}`
+    });
+    m.setIcon(markerIcon(color, true));
+    iw.open(map, m);
+    _activeMarker = m; _activeInfoWindow = iw;
+  }, 400);
+}
+
+// ═══════════════════════════════════════
+// CATEGORIES & FILTERS UI
+// ═══════════════════════════════════════
+function buildCategories() {
+  const el = document.getElementById('catsEl');
+  el.addEventListener('wheel', function(e) {
+    if (e.deltaY !== 0) { e.preventDefault(); el.scrollLeft += e.deltaY * 1.5; }
+  }, {passive: false});
+  CATS.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn' + (cat==='Todos' ? ' active' : '');
+    btn.dataset.cat = cat;
+    btn.textContent = cat;
+    btn.addEventListener('click', () => {
+      _catBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilters.cat = cat;
+      applyFilters();
+    });
+    el.appendChild(btn);
+  });
+  window._catBtns = Array.from(document.querySelectorAll('.cat-btn'));
+}
+
+function setFilter(type, btn) {
+  _vibeChips.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilters[type] = btn.dataset.val;
+  applyFilters();
+}
+
+function toggleEventFilter(btn) {
+  activeFilters.eventOnly = !activeFilters.eventOnly;
+  btn.classList.toggle('active', activeFilters.eventOnly);
+  applyFilters();
+}
+
+function setSort(btn) {
+  _sortBtns.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilters.sort = btn.dataset.sort;
+  applyFilters();
+}
+
+function toggleAdv() {
+  const el = document.getElementById('advFilters');
+  const btn = document.getElementById('ftoggleBtn');
+  const open = el.classList.contains('open');
+  el.classList.toggle('open', !open);
+  el.classList.toggle('closed', open);
+  btn.textContent = open ? '+ Filtrar' : '- Cerrar';
+  btn.classList.toggle('is-open', !open);
+}
+
+function updateBadges(cat, vibe) {
+  let n = 0;
+  if (cat !== 'Todos') n++;
+  if (vibe !== 'Todos') n++;
+  if (activeFilters.eventOnly) n++;
+  const el = document.getElementById('activeCt');
+  el.textContent = n; el.classList.toggle('on', n>0);
+  const parts = [];
+  if (cat !== 'Todos') parts.push(cat);
+  if (vibe !== 'Todos') parts.push(VIBE_LABEL[vibe]);
+  if (activeFilters.eventOnly) parts.push('Con eventos');
+  document.getElementById('filterSummary').textContent = parts.join(' · ');
+}
+
+// ═══════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════
+function haversine(la1,lo1,la2,lo2){
+  const R=6371000,r=Math.PI/180,dLat=(la2-la1)*r,dLon=(lo2-lo1)*r;
+  const a=Math.sin(dLat/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function formatDist(m){return m<1000?`${Math.round(m)} m`:`${(m/1000).toFixed(1)} km`}
+function hideLoading(){document.getElementById('loading').classList.add('hidden')}
+
+// ═══════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════
+function toggleTheme() {
+  document.documentElement.classList.toggle('light');
+  const isLight = document.documentElement.classList.contains('light');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  updateThemeIcon();
+  if (map) {
+    const isDark = !isLight;
+    map.setOptions({ styles: isDark ? DARK_MAP_STYLE : [
+      {featureType:'poi',elementType:'labels',stylers:[{visibility:'off'}]},
+      {featureType:'transit',elementType:'labels',stylers:[{visibility:'off'}]}
+    ]});
+  }
+}
+function updateThemeIcon() {
+  const isLight = document.documentElement.classList.contains('light');
+  document.getElementById('themeIcon').textContent = isLight ? '&#127769;' : '&#9728;';
+}
+
+// ═══════════════════════════════════════
+// MOBILE MAP WIDGET
+// ═══════════════════════════════════════
+(function(){
+  const BREAKPOINT=700, MAP_NORMAL_H=220, TRANSITION=300;
+  const mapWrap=document.getElementById('map-wrap');
+  const widget=document.getElementById('mob-map-widget');
+  const mapBox=document.getElementById('mapBox');
+  const mapEl=document.getElementById('map');
+  let currentState='normal', mapReady=false;
+  function isMobile(){return window.innerWidth<=BREAKPOINT}
+  window.ensurePlaced=function(){
+    if(isMobile()){if(mapEl.parentElement!==mapBox)mapBox.insertBefore(mapEl,mapBox.firstChild);}
+    else{if(mapEl.parentElement!==mapWrap)mapWrap.insertBefore(mapEl,mapWrap.firstChild);}
+  };
+  function applyMapState(state,animate){
+    currentState=state;
+    if(!animate)mapBox.style.transition='none';
+    if(state==='closed'){widget.classList.remove('is-fullscreen');mapBox.style.height='0px';}
+    else if(state==='normal'){widget.classList.remove('is-fullscreen');mapBox.style.height=MAP_NORMAL_H+'px';}
+    else if(state==='fullscreen'){widget.classList.add('is-fullscreen');mapBox.style.height=window.innerHeight+'px';}
+    if(!animate){mapBox.offsetHeight;mapBox.style.transition='';}
+    document.querySelectorAll('.map-state-btn').forEach(btn=>btn.classList.toggle('is-active',btn.dataset.state===state));
+    if(mapReady)setTimeout(()=>google.maps.event.trigger(map,"resize"),TRANSITION+20);
+  }
+  window.setMapState=function(state){if(!isMobile())return;applyMapState(state,true);};
+  window.initMobileWidget=function(){
+    mapReady=true;
+    if(isMobile())applyMapState('normal',false);
+    else if(map)google.maps.event.trigger(map,"resize");
+  };
+  let resizeTimer;
+  window.addEventListener('resize',()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=>{
+      if(isMobile()){
+        if(currentState==='fullscreen')mapBox.style.height=window.innerHeight+'px';
+        else if(currentState==='normal')mapBox.style.height=MAP_NORMAL_H+'px';
+      }
+      if(mapReady)google.maps.event.trigger(map,"resize");
+    },80);
+  });
+})();
+
+// ═══════════════════════════════════════
+// SIDEBAR RESIZE
+// ═══════════════════════════════════════
+(function(){
+  const handle = document.getElementById('resizeHandle');
+  const layout = document.querySelector('.layout');
+  if(!handle || !layout) return;
+  let dragging = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e){
+    dragging = true; startX = e.clientX; startW = document.querySelector('.sidebar').offsetWidth;
+    handle.classList.add('dragging'); document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
+  });
+  document.addEventListener('mousemove', function(e){
+    if(!dragging) return;
+    const newW = Math.min(Math.max(startW + e.clientX - startX, 260), window.innerWidth * 0.55);
+    layout.style.gridTemplateColumns = newW + 'px 5px 1fr';
+    if(map) google.maps.event.trigger(map, "resize");
+  });
+  document.addEventListener('mouseup', function(){
+    if(!dragging) return;
+    dragging = false; handle.classList.remove('dragging'); document.body.style.cursor = ''; document.body.style.userSelect = '';
+  });
+})();
+</script>
+</body>
+</html>
